@@ -26,17 +26,17 @@ class Trainer():
         self.test_loss = {'Loss': []}
         self.num_steps = 0
         self.print_every = print_every
-        self.loss = nn.BCELoss(reduction='sum')
+        self.loss = nn.NLLLoss(reduction='sum')
         self.wb = wandb
 
 
-    def _loss(self, x, xhat, train=True):
-        bce = self.loss(xhat, x)
+    def _loss(self, y, yhat, train=True):
+        loss = self.loss(yhat, y)
 
         if train:
-            self.train_loss['Loss'].append(loss.item() / len(x))
+            self.train_loss['Loss'].append(loss.item() / len(y))
         else:
-            self.test_loss['Loss'].append(loss.item() / len(x))
+            self.test_loss['Loss'].append(loss.item() / len(y))
 
         return loss
 
@@ -44,34 +44,35 @@ class Trainer():
     ## function that does the in-epoch training
     def _train_epoch(self, data_loader, epoch):
         self.model.train()
-        ## iterate over len(data)/batch_size
-        for i, (data) in enumerate(data_loader):
+        ## iterate over len(x)/batch_size
+        for i, (x, _, y) in enumerate(data_loader):
 
             self.num_steps += 1
-            data = data.to(self.device)
+            x = x.to(self.device)
+            y = y.to(self.device)
             self.opt.zero_grad()
 
-            xhat = self.model(data)
+            yhat = self.model(x)
 
-            loss = self._loss(data, xhat, train=True)
-
+            loss = self._loss(y, yhat, train=True)
             loss.backward()
             self.opt.step()
 
-            self._report_train(i)
+            self._report(i, train=True)
 
 
     def _test_epoch(self, test_loader, epoch):
         self.model.eval()
         with torch.no_grad():
-            for i, (data) in enumerate(test_loader):
-                data = data.to(self.device)
+            for i, (x, _, y) in enumerate(test_loader):
+                x = x.to(self.device)
+                y = y.to(self.device)
 
-                xhat = self.model(data)
+                yhat = self.model(x)
 
-                loss = self._loss(data, xhat, train=False)
+                loss = self._loss(y, yhat, train=False)
 
-        self._report_test(epoch)
+        self._report(i, train=False)
 
         return loss
 
@@ -82,7 +83,7 @@ class Trainer():
 
         ## hold samples, real and generated, for initial plotting
         if early_stop:
-            early_stopping = EarlyStopping(patience=20, min_delta=.1,
+            early_stopping = EarlyStopping(patience=10, min_delta=.1,
                                            verbose=True)
 
         ## train for n number of epochs
@@ -96,7 +97,7 @@ class Trainer():
             self._train_epoch(train_loader, epoch)
             val_loss = self._test_epoch(test_loader, epoch)
 
-            # update learning rate according to cheduler
+            # update learning rate according to scheduler
             if self.sch is not None:
                 self.wb.log({'LR': self.opt.param_groups[0]['lr']},
                             step=self.num_steps)
@@ -108,7 +109,7 @@ class Trainer():
             # report elapsed time per epoch and total run tume
             epoch_time = datetime.datetime.now() - e_time
             elap_time = datetime.datetime.now() - time_start
-            print('Time per epoch: ', epoch_time.seconds, ' s')
+            print('Time per epoch: %i s' % epoch_time.seconds)
             print('Elapsed time  : %.2f m' % (elap_time.seconds/60))
             print('##'*20)
 
@@ -121,31 +122,27 @@ class Trainer():
 
         if save:
             torch.save(self.model.state_dict(),
-                       '%s/VAE_model_%s.pt' %
+                       '%s/model_%s.pt' %
                        (self.wb.run.dir, self.wb.run.name))
 
 
-    def _report_train(self, i):
+    def _report(self, i, train=True):
         ## ------------------------ Reports ---------------------------- ##
         ## print scalars to std output and save scalars/hist to W&B
         if i % self.print_every == 0:
-            print("Training iteration %i, global step %i" %
-                  (i + 1, self.num_steps))
-            print("Loss: %3.2f" % (self.train_loss['Loss'][-1]))
+            if train:
+                print('*** TRAIN ***')
+                print("Iteration %i, global step %i" % (i + 1, self.num_steps))
+                print("Loss: %3.2f" % (self.train_loss['Loss'][-1]))
+                self.wb.log({'Train_Loss': self.train_loss['Loss'][-1]},
+                            step=self.num_steps)
+            else:
+                print('*** TEST ***')
+                print("Epoch %i, global step %i" % (ep, self.num_steps))
+                print("Loss: %.2f" % (self.test_loss['Loss'][-1]))
+                self.wb.log({'Test_Loss'     : self.test_loss['Loss'][-1]},
+                            step=self.num_steps)
 
-            self.wb.log({
-                'Train_Loss'     : self.train_loss['Loss'][-1]},
-                        step=self.num_steps)
+
+
             print("__"*20)
-
-    def _report_test(self, ep):
-        ## ------------------------ Reports ---------------------------- ##
-        ## print scalars to std output and save scalars/hist to W&B
-        print('*** TEST LOSS ***')
-        print("Epoch %i, global step %i" % (ep, self.num_steps))
-        print("Loss: %.2f" % (self.test_loss['Loss'][-1]))
-
-        self.wb.log({
-            'Test_Loss'     : self.test_loss['Loss'][-1]},
-                    step=self.num_steps)
-        print("__"*20)
