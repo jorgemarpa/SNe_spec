@@ -13,25 +13,31 @@ local_root = os.getcwd()
 
 ## load pkl synthetic light-curve files to numpy array
 class DataSet(Dataset):
-    def __init__(self, machine='local'):
+    def __init__(self, machine='local', timestamp='110819'):
         """SNe Spec dataset"""
 
         if machine == 'local':
-            root = local_root
+            root = '%s/data/iter_1' % local_root
         elif machine == 'colab':
             root = colab_root
         elif machine == 'exalearn':
-            root = exalearn_root
+            root = '%s/spec/SNe' % exalearn_root
         else:
             print('Wrong machine, please select loca, colab or exalearn')
             sys.exit()
 
-        self.spec_train = np.load('%s/data/iter_1/spectraX.train.aug.110819.npy' % (root))
-        self.label_train = np.load('%s/data/iter_1/labels.train.aug.110819.npy' % (root))
+        self.spec_train = np.load('%s/spectraX.train.aug.%s.npy' 
+                                  % (root, timestamp))
+        self.label_train = np.load('%s/labels.train.aug.%s.npy' 
+                                   % (root, timestamp), 
+                                   allow_pickle=True)
 
 
-        self.spec_test = np.load('%s/data/iter_1/spectraX.test.110819.npy' % (root))
-        self.label_test = np.load('%s/data/iter_1/labels.test.110819.npy' % (root))
+        self.spec_test = np.load('%s/spectraX.test.%s.npy' 
+                                 % (root, timestamp))
+        self.label_test = np.load('%s/labels.test.%s.npy' 
+                                  % (root, timestamp), 
+                                  allow_pickle=True)
 
         self.spec_train = self.spec_train[:,:, np.newaxis].astype(np.float32)
         self.spec_test = self.spec_test[:,:, np.newaxis].astype(np.float32)
