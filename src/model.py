@@ -27,7 +27,7 @@ class RecNN(nn.Module):
         self.linear = nn.Linear(hidden_dim * (2 if bidir else 1),
                                 out_size)
 
-        self.log_softmax = nn.LogSoftmax(dim=-1)
+        self.log_softmax = nn.LogSoftmax(dim=1)
 
         self.init_weights()
 
@@ -41,37 +41,66 @@ class RecNN(nn.Module):
 
 
     def forward(self, x):
+        self.rnn.flatten_parameters()
         out, h = self.rnn(x)
         out = self.log_softmax(self.linear(out[:, -1, :]))
         return out
 
 
-# class ConvNN(nn.Module):
-#     def __init__(self, seq_len, hidden_dim, n_layers,
-#                  n_feats=3, dropout=0.3):
-#         super(ConvNN, self).__init__()
-#
-#         self.conv1 = nn.Conv1d()
-#         self.conv1 = nn.Conv1d()
-#         self.conv1 = nn.Conv1d()
-#
-#         self.bn1 = nn.BatchNorm1d()
-#         self.bn2 = nn.BatchNorm1d()
-#         self.bn3 = nn.BatchNorm1d()
-#
-#         self.dp1 = nn.Dropout(dropout)
-#         self.dp1 = nn.Dropout(dropout)
-#         self.dp1 = nn.Dropout(dropout)
-#
-#         self.maxpool = nn.MaxPool1d()
-#         self.maxpool = nn.MaxPool1d()
-#         self.maxpool = nn.MaxPool1d()
-#
-#         self.out = nn.Linear()
-#
-#         self.init_weights()
-#
-#
-#     def forward(self, x):
-#         # out =
-#         return out
+
+class ConvNN(nn.Module):
+    def __init__(self, seq_len, n_feats,
+                 kernel_size=3, out_size=1, dropout=0.3):
+        super(ConvNN, self).__init__()
+        
+        self.conv1 = nn.Sequential(
+            nn.Conv1d(n_feats, 4, kernel_size),
+            nn.BatchNorm1d(4),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=3, stride=3)
+            )
+        self.conv2 = nn.Sequential(
+            nn.Conv1d(4, 8, kernel_size),
+            nn.BatchNorm1d(8),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=3, stride=3)
+            )
+        self.conv3 = nn.Sequential(
+            nn.Conv1d(8, 16, kernel_size),
+            nn.BatchNorm1d(16),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=3, stride=3)
+            )
+        self.conv4 = nn.Sequential(
+            nn.Conv1d(16, 32, kernel_size),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=3, stride=3)
+            )
+
+        self.out = nn.Linear(32 * 19, out_size)
+        self.log_softmax = nn.LogSoftmax(dim=1)
+
+
+    def forward(self, x):
+        # shape(x) = N, L, C
+        # conv1d needs N,C,L
+        #print(x.shape)
+        x = x.transpose(1,2)
+        #print('transp', x.shape)
+        x = self.conv1(x)
+        #print('cnv1', x.shape)
+        x = self.conv2(x)
+        #print('cnv2', x.shape)
+        x = self.conv3(x)
+        #print('cnv3', x.shape)
+        x = self.conv4(x)
+        #print('cnv4', x.shape)
+        
+        x = x.flatten(start_dim=1)
+        #print('flat', x.shape)
+        
+        out = self.out(x)
+        #print('out', out.shape)
+        log_prob = self.log_softmax(out)
+        return log_prob
