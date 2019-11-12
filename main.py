@@ -25,7 +25,7 @@ parser.add_argument('--run-name', dest='run_name', type=str, default='test',
 parser.add_argument('--machine', dest='machine', type=str, default='local',
                     help='Where is running ([local], colab, exalearn)')
 
-parser.add_argument('--data', dest='data', type=str, default='spec',
+parser.add_argument('--data', dest='data', type=str, default='spec-110819',
                     help='Which data use ([spec])')
 
 parser.add_argument('--optim', dest='optim', type=str, default='adam',
@@ -39,7 +39,7 @@ parser.add_argument('--early-stop', dest='early_stop', action='store_true',
                     default=False, help='Early stopping, [False]')
 parser.add_argument('--batch-size', dest='batch_size', type=int, default=64,
                     help='batch size [64]')
-parser.add_argument('--num-epochs', dest='num_epochs', type=int, default=200,
+parser.add_argument('--epochs', dest='num_epochs', type=int, default=200,
                     help='total number of training epochs [200]')
 
 parser.add_argument('--arch', dest='arch', type=str, default='lstm',
@@ -52,7 +52,7 @@ parser.add_argument('--dropout', dest='dropout', type=float, default=0.3,
                     help='dropout for rnn/conv layers [0.2]')
 parser.add_argument('--rnn-bidir', dest='rnn_bidir', action='store_true',
                     default=False, help='Bidirectional RNN [False]')
-parser.add_argument('--kernel-size', dest='kernel_size', type=int, default=5,
+parser.add_argument('--kernel-size', dest='kernel_size', type=int, default=3,
                     help='kernel size for conv, use odd ints [5]')
 
 parser.add_argument('--comment', dest='comment', type=str, default='',
@@ -60,7 +60,7 @@ parser.add_argument('--comment', dest='comment', type=str, default='',
 args = parser.parse_args()
 
 # Initialize W&B project
-wandb.init(project="SNe_Spec", name=args.run_name)
+wandb.init(project="SNe_Spec")
 
 # save hyper-parameters to W&B
 wandb.config.update(args)
@@ -75,7 +75,8 @@ def count_parameters(model):
 def run_code():
 
     ## Load Data ##
-    dataset = DataSet()
+    dataset = DataSet(machine=args.machine, 
+                      timestamp=args.data.split('-')[1])
 
     wandb.config.spec_len = dataset.spec_len
     wandb.config.spec_nfeat = dataset.spec_nfeat
@@ -88,7 +89,7 @@ def run_code():
 
     ## data loaders for training and testing
     train_loader, test_loader = dataset.get_dataloader(batch_size=args.batch_size,
-                                                       shuffle=rnd_seed,
+                                                       shuffle=True,
                                                        test_split=.2,
                                                        random_seed=rnd_seed)
     print('')
@@ -106,9 +107,11 @@ def run_code():
                       dropout=args.dropout,
                       bidir=args.rnn_bidir)
     elif args.arch == 'conv':
-        print('Not implemented yet...')
-        print('Exiting...')
-        sys.exit()
+        model = ConvNN(seq_len=dataset.spec_len,
+                       n_feats=dataset.spec_nfeat,
+                       kernel_size=args.kernel_size,
+                       out_size=dataset.total_cls,
+                       dropout=args.dropout)
 
     wandb.watch(model, log='gradients')
 
@@ -162,7 +165,8 @@ def run_code():
     trainer = Trainer(model, optimizer, args.batch_size, wandb,
                       print_every=50,
                       device=device,
-                      scheduler=scheduler)
+                      scheduler=scheduler,
+                      label_enc=dataset.label_int_enc)
 
     if args.dry_run:
         print('******** DRY RUN ******** ')
@@ -170,6 +174,9 @@ def run_code():
 
     trainer.train(train_loader, test_loader, args.num_epochs,
                   save=True, early_stop=args.early_stop)
+    
+    trainer.test_in(dataset.spec_test, 
+                    dataset.label_test_int)
 
 
 if __name__ == "__main__":
