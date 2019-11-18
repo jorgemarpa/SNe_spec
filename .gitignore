@@ -1,2 +1,5 @@
 data/
 wandb/
+notebooks/.ipynb_checkpoints/
+.ipynb_checkpoints/
+src/.ipynb_checkpoints/
