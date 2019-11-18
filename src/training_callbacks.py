@@ -31,7 +31,7 @@ class EarlyStopping:
 
         if self.best_score is None:
             self.best_score = current_loss
-        elif np.absolute(current_loss - self.best_score) < self.min_delta:
+        elif torch.abs(current_loss - self.best_score) < self.min_delta:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} / {self.patience}')
             if self.counter >= self.patience:
