@@ -1,0 +1,17 @@
+program: main.py
+metric:
+  name: Val_Loss
+  goal: minimize
+parameters:
+  lr:
+    min: 0.00001
+    max: 0.1
+  optim:
+    values: ["adam", "sgd"]
+
+  arch:
+    values: ['conv']
+  dropout:
+    values: [.1,.2,.3,.4,.5]
+  kernel-size:
+    values: [3,5,7,9]
