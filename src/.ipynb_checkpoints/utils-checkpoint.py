@@ -8,6 +8,18 @@ if socket.gethostname() == 'exalearn':
     matplotlib.use('agg')
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+    
+    
+
 def plot_confusion_matrix(cm, classes=None,
                           normalize=False,
                           title=None,
@@ -16,6 +28,7 @@ def plot_confusion_matrix(cm, classes=None,
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
+    plt.close('all')
     if not title:
         if normalize:
             title = 'Normalized confusion matrix'
@@ -67,18 +80,19 @@ def plot_confusion_matrix(cm, classes=None,
 
 
 def plot_conf_matrix(cm, classes, 
-                     normalized=True, cl_names=None):
+                     normalized=False, cl_names=None):
     '''
     function to plot confusion matrix
     '''
-    fig = plt.figure(figsize=(20,15))
+    plt.close('all')
+    fig = plt.figure(figsize=(22,16))
     if normalized:
         cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         sns.heatmap(cm_normalized, annot=True, fmt='0.3f', linewidths=.5, 
                     xticklabels=cl_names, yticklabels=cl_names, cmap="GnBu", 
                     annot_kws={'size': 'medium'})
     else:
-        sns.heatmap(cm, annot=True, fmt='f', linewidths=.5, 
+        sns.heatmap(cm, annot=True, fmt='d', linewidths=.5,
                     xticklabels=cl_names, yticklabels=cl_names, cmap="GnBu", 
                     annot_kws={'size': 'x-large'})
     plt.xlabel('Predicted Label')
@@ -91,3 +105,20 @@ def plot_conf_matrix(cm, classes,
     image  = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     
     return fig, image
+
+
+def normalize_target(data, scale_to=[0,1], n_feat=2):
+    normed = np.zeros_like(data)
+    f_min = np.min(data, axis=0)
+    f_max = np.max(data, axis=0)
+    for f in range(n_feat):
+        normed[:,f*2] = (data[:,f*2] - f_min[f*2]) / \
+                      (f_max[f*2] - f_min[f*2])
+        normed[:,f*2+1] = data[:,f*2+1] / \
+                          (f_max[f*2] - f_min[f*2])
+    
+    return normed
+
+
+def rmse(predictions, targets):
+    return np.sqrt(((predictions - targets) ** 2).mean())

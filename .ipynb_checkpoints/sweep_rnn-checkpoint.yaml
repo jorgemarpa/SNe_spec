@@ -1,0 +1,22 @@
+program: main.py
+method: grid
+metric:
+  name: Val_Loss
+  goal: minimize
+early_terminate:
+  type: envelope
+parameters:
+  lr:
+    value: 0.005
+  lr-sch:
+    value: 'step'
+  arch:
+    value: 'gru'
+  hidden-units:
+    values: [16,32,64,128]
+  rnn-layers:
+    values: [2,3]
+  dropout:
+    values: [.3]
+  rnn-bidir:
+    values: [False]
