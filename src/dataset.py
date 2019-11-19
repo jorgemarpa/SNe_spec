@@ -27,16 +27,16 @@ class DataSet_Class(Dataset):
             print('Wrong machine, please select loca, colab or exalearn')
             sys.exit()
 
-        self.spec_train = np.load('%s/spectraX.train.aug.%s.%s.clas.npy'
+        self.spec_train = np.load('%s/spectraX.train.aug.%s.%s.class.npy'
                                   % (root, timestamp, length))
-        self.label_train = np.load('%s/labels.train.aug.%s.%s.clas.npy'
+        self.label_train = np.load('%s/labels.train.aug.%s.%s.class.npy'
                                    % (root, timestamp, length),
                                    allow_pickle=True)
 
 
-        self.spec_test = np.load('%s/spectraX.test.%s.%s.clas.npy'
+        self.spec_test = np.load('%s/spectraX.test.%s.%s.class.npy'
                                  % (root, timestamp, length))
-        self.label_test = np.load('%s/labels.test.%s.%s.clas.npy'
+        self.label_test = np.load('%s/labels.test.%s.%s.class.npy'
                                   % (root, timestamp, length),
                                   allow_pickle=True)
 
