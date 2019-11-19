@@ -22,13 +22,13 @@ parser.add_argument('--dry-run', dest='dry_run', action='store_true',
                     help='Load data and initialize models [False]')
 parser.add_argument('--run-name', dest='run_name', type=str, default='',
                     help='Name of the run')
-parser.add_argument('--machine', dest='machine', type=str, 
+parser.add_argument('--machine', dest='machine', type=str,
                     default='exalearn',
                     help='Where is running ([local], colab, exalearn)')
 
 parser.add_argument('--mode', dest='mode', type=str, default='clas',
                     help='Whether to do classification or regression ([clas], regr)')
-parser.add_argument('--data', dest='data', type=str, 
+parser.add_argument('--data', dest='data', type=str,
                     default='spec-111519-1696',
                     help='Which data use ([spec])')
 
@@ -66,7 +66,7 @@ parser.add_argument('--comment', dest='comment', type=str, default='',
 args = parser.parse_args()
 
 # Initialize W&B project
-wandb.init(project="SNe_Spec_%s" % (args.mode), 
+wandb.init(project="SNe_Spec_%s" % (args.mode),
            notes='%s %s' % (args.run_name, args.comment))
 
 # save hyper-parameters to W&B
@@ -78,7 +78,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device.type == 'cuda':
     torch.cuda.empty_cache()
 
-# function that count models trainable parameters 
+# function that count models trainable parameters
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -87,9 +87,9 @@ def count_parameters(model):
 def do_classification():
 
     ## Load Data ##
-    dataset = DataSet_Class(machine=args.machine, 
+    dataset = DataSet_Class(machine=args.machine,
                             timestamp=args.data.split('-')[1],
-                            length=args.data.split('-'[2]))
+                            length=args.data.split('-')[2])
     dataset.spec_train += .5
     dataset.spec_test += .5
 
@@ -189,8 +189,8 @@ def do_classification():
 
     trainer.train(train_loader, test_loader, args.num_epochs,
                   save=True, early_stop=args.early_stop)
-    
-    trainer.test_in(dataset.spec_test, 
+
+    trainer.test_in(dataset.spec_test,
                     dataset.label_test_int)
     return
 
@@ -199,7 +199,7 @@ def do_classification():
 def do_regression():
 
     ## Load Data ##
-    dataset = DataSet_Regr(machine=args.machine, 
+    dataset = DataSet_Regr(machine=args.machine,
                            timestamp=args.data.split('-')[1],
                            length=args.data.split('-')[2])
     dataset.spec_train += .5
@@ -301,12 +301,12 @@ def do_regression():
 
     trainer.train(train_loader, test_loader, args.num_epochs,
                   save=True, early_stop=args.early_stop)
-    
-    trainer.test_in(dataset.spec_test, 
+
+    trainer.test_in(dataset.spec_test,
                     dataset.target_test)
-    
+
     return
-    
+
 
 
 if __name__ == "__main__":

@@ -7,13 +7,13 @@ from torch.utils.data import DataLoader, TensorDataset, Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 from sklearn import preprocessing
 
-colab_root = '/content/drive/My Drive/Colab_Notebooks/data'
+colab_root = '/content/drive/My Drive/data_for_SNe_spec'
 exalearn_root = '/home/jorgemarpa/data'
 local_root = os.getcwd()
 
 ## load pkl synthetic light-curve files to numpy array
 class DataSet_Class(Dataset):
-    def __init__(self, machine='local', timestamp='111519', 
+    def __init__(self, machine='local', timestamp='111519',
                  length='1696'):
         """SNe Spec dataset"""
 
@@ -27,17 +27,17 @@ class DataSet_Class(Dataset):
             print('Wrong machine, please select loca, colab or exalearn')
             sys.exit()
 
-        self.spec_train = np.load('%s/spectraX.train.aug.%s.%s.clas.npy' 
+        self.spec_train = np.load('%s/spectraX.train.aug.%s.%s.clas.npy'
                                   % (root, timestamp, length))
-        self.label_train = np.load('%s/labels.train.aug.%s.%s.clas.npy' 
-                                   % (root, timestamp, length), 
+        self.label_train = np.load('%s/labels.train.aug.%s.%s.clas.npy'
+                                   % (root, timestamp, length),
                                    allow_pickle=True)
 
 
-        self.spec_test = np.load('%s/spectraX.test.%s.%s.clas.npy' 
+        self.spec_test = np.load('%s/spectraX.test.%s.%s.clas.npy'
                                  % (root, timestamp, length))
-        self.label_test = np.load('%s/labels.test.%s.%s.clas.npy' 
-                                  % (root, timestamp, length), 
+        self.label_test = np.load('%s/labels.test.%s.%s.clas.npy'
+                                  % (root, timestamp, length),
                                   allow_pickle=True)
 
         self.spec_train = self.spec_train[:,:, np.newaxis].astype(np.float32)
@@ -90,12 +90,12 @@ class DataSet_Class(Dataset):
                                       sampler=test_sampler, drop_last=False)
 
         return train_loader, val_loader
-    
-    
-    
-    
+
+
+
+
 class DataSet_Regr(Dataset):
-    def __init__(self, machine='local', timestamp='111519', 
+    def __init__(self, machine='local', timestamp='111519',
                  length='1696'):
         """SNe Spec dataset"""
 
@@ -109,24 +109,24 @@ class DataSet_Regr(Dataset):
             print('Wrong machine, please select loca, colab or exalearn')
             sys.exit()
 
-        self.spec_train = np.load('%s/spectraX.train.aug.%s.%s.regr.npy' 
+        self.spec_train = np.load('%s/spectraX.train.aug.%s.%s.regr.npy'
                                   % (root, timestamp, length))
-        self.target_train = np.load('%s/labels.train.aug.%s.%s.regr.npy' 
-                                    % (root, timestamp, length), 
+        self.target_train = np.load('%s/labels.train.aug.%s.%s.regr.npy'
+                                    % (root, timestamp, length),
                                     allow_pickle=True)[:,[0,2]]
 
 
-        self.spec_test = np.load('%s/spectraX.test.%s.%s.regr.npy' 
+        self.spec_test = np.load('%s/spectraX.test.%s.%s.regr.npy'
                                  % (root, timestamp, length))
-        self.target_test = np.load('%s/labels.test.%s.%s.regr.npy' 
-                                   % (root, timestamp, length), 
+        self.target_test = np.load('%s/labels.test.%s.%s.regr.npy'
+                                   % (root, timestamp, length),
                                    allow_pickle=True)[:,[0,2]]
 
         self.spec_train = self.spec_train[:,:, np.newaxis].astype(np.float32)
         self.spec_test = self.spec_test[:,:, np.newaxis].astype(np.float32)
         self.target_train = self.target_train.astype(np.float32)
         self.target_test = self.target_test.astype(np.float32)
-        
+
         self.scaler_data_min = np.array([-12, 0.6], dtype=np.float32)
         self.scaler_data_max = np.array([22, 1.8], dtype=np.float32)
         #self.target_train_n = (self.target_train - self.scaler_data_min)/\
@@ -135,11 +135,11 @@ class DataSet_Regr(Dataset):
         #                      (self.scaler_data_max - self.scaler_data_min)
         self.target_train[:,0] += 12
         self.target_test[:,0] += 12
-        
+
 
         self.spec_len = self.spec_test.shape[1]
         self.spec_nfeat = self.spec_test.shape[2]
-        
+
         self.names = ['phase', 'delta_m15']
         self.total_targets = 2
 
