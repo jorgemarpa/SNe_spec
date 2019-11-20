@@ -17,8 +17,8 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
-    
-    
+
+
 
 def plot_confusion_matrix(cm, classes=None,
                           normalize=False,
@@ -52,7 +52,7 @@ def plot_confusion_matrix(cm, classes=None,
     ax.set(xticks=np.arange(cm.shape[1]),
            yticks=np.arange(cm.shape[0]),
            # ... and label them with the respective list entries
-           xticklabels=classes if classes!=None else np.arange(cm.shape[1]), 
+           xticklabels=classes if classes!=None else np.arange(cm.shape[1]),
            yticklabels=classes if classes!=None else np.arange(cm.shape[0]),
            title=title,
            ylabel='True label',
@@ -74,12 +74,12 @@ def plot_confusion_matrix(cm, classes=None,
     fig.canvas.draw()
     image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
     image  = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    
+
     return fig, image
 
 
 
-def plot_conf_matrix(cm, classes, 
+def plot_conf_matrix(cm, classes,
                      normalized=False, cl_names=None):
     '''
     function to plot confusion matrix
@@ -88,22 +88,22 @@ def plot_conf_matrix(cm, classes,
     fig = plt.figure(figsize=(22,16))
     if normalized:
         cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        sns.heatmap(cm_normalized, annot=True, fmt='0.3f', linewidths=.5, 
-                    xticklabels=cl_names, yticklabels=cl_names, cmap="GnBu", 
+        sns.heatmap(cm_normalized, annot=True, fmt='0.3f', linewidths=.5,
+                    xticklabels=cl_names, yticklabels=cl_names, cmap="GnBu",
                     annot_kws={'size': 'medium'})
     else:
         sns.heatmap(cm, annot=True, fmt='d', linewidths=.5,
-                    xticklabels=cl_names, yticklabels=cl_names, cmap="GnBu", 
+                    xticklabels=cl_names, yticklabels=cl_names, cmap="GnBu",
                     annot_kws={'size': 'x-large'})
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
-    
+
     fig.tight_layout()
     fig.canvas.draw()
     image = np.frombuffer(fig.canvas.tostring_rgb(), dtype='uint8')
     image  = image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    
+
     return fig, image
 
 
@@ -116,9 +116,27 @@ def normalize_target(data, scale_to=[0,1], n_feat=2):
                       (f_max[f*2] - f_min[f*2])
         normed[:,f*2+1] = data[:,f*2+1] / \
                           (f_max[f*2] - f_min[f*2])
-    
+
     return normed
 
 
 def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
+
+
+def residuals_scatter_plot(real, pred, epoch=0,
+                           labels=['Phase', '$\Delta m_{15}$']):
+
+    plt.close('all')
+    fig, ax = plt.subplots(ncols=len(labels), figsize=(10,4))
+    fig.suptitle('Epoch %i' % epoch)
+    for i in range(len(labels)):
+        ax[i].scatter(pred[:,i], pred[:,i] - real[:,i],
+                      marker='.', c='royalblue', alpha=.7)
+        ax[i].set_title(labels[i])
+        ax[i].set_xlabel('Pred')
+        ax[i].set_ylabel('Pred - True')
+
+    fig.tight_layout()
+
+    return fig
