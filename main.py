@@ -48,7 +48,7 @@ parser.add_argument('--epochs', dest='num_epochs', type=int, default=150,
                     help='total number of training epochs [150]')
 
 parser.add_argument('--arch', dest='arch', type=str, default='lstm',
-                    help='architecture for Enc & Dec ([lstm],gru,rnn,conv)')
+                    help='Layer architecture ([lstm],gru,rnn,conv)')
 parser.add_argument('--hidden-units', dest='h_units', type=int, default=32,
                     help='number of hidden units [32]')
 parser.add_argument('--rnn-layers', dest='rnn_layers', type=int, default=3,
