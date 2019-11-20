@@ -66,7 +66,8 @@ parser.add_argument('--comment', dest='comment', type=str, default='',
 args = parser.parse_args()
 
 # Initialize W&B project
-wandb.init(project="SNe_Spec_%s" % (args.mode),
+wandb.init(entity='deep_sne',
+           project="SNe_Spec_%s" % (args.mode),
            notes='%s %s' % (args.run_name, args.comment))
 
 # save hyper-parameters to W&B
