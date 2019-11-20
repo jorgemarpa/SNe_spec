@@ -3,18 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class RecNN(nn.Module):
+class RecNN_Clas(nn.Module):
     def __init__(self, seq_len, n_feats, hidden_dim, n_layers,
                  rnn='lstm', out_size=1, dropout=0.3,
-                 bidir=False, mode='clas', device='cpu'):
-        super(RecNN, self).__init__()
+                 bidir=False, device='cpu'):
+        super(RecNN_Clas, self).__init__()
 
         self.rnn_s = rnn
         self.n_layers = n_layers
         self.bidir = bidir
         self.hidden_dim = hidden_dim
         self.device = device
-        self.mode = mode
 
         ## batch_first --> [batch, seq, feature]
         if rnn == 'lstm':
@@ -67,11 +66,81 @@ class RecNN(nn.Module):
         #x = x.flatten(start_dim=1)
         x = x[:,-1,:]
         out = self.linear(x)
-        if self.mode in ['reg', 'regre', 'regression']:
-            return out
+
+        log_prob = F.log_softmax(out, dim=1)
+        return log_prob
+
+
+
+class RecNN_Regr(nn.Module):
+    def __init__(self, seq_len, n_feats, hidden_dim, n_layers,
+                 rnn='lstm', out_size=1, dropout=0.3,
+                 bidir=False, device='cpu'):
+        super(RecNN_Regr, self).__init__()
+
+        self.rnn_s = rnn
+        self.n_layers = n_layers
+        self.bidir = bidir
+        self.hidden_dim = hidden_dim
+        self.device = device
+
+        ## batch_first --> [batch, seq, feature]
+        if rnn == 'lstm':
+            self.rnn = nn.LSTM(n_feats, hidden_dim, n_layers,
+                              dropout=dropout, bidirectional=bidir,
+                              batch_first=True)
+        elif rnn == 'gru':
+            self.rnn = nn.GRU(n_feats, hidden_dim, n_layers,
+                              dropout=dropout, bidirectional=bidir,
+                              batch_first=True)
         else:
-            log_prob = F.log_softmax(out, dim=1)
-            return log_prob
+            self.rnn = nn.RNN(n_feats, hidden_dim, n_layers,
+                              nonlinearity='relu',
+                              dropout=dropout, bidirectional=bidir,
+                              batch_first=True)
+
+        ## if doing many-to-many, input size must be x seq_len
+        self.linear_p = nn.Linear(hidden_dim * (2 if bidir else 1),
+                                  1)
+        self.linear_dm = nn.Linear(hidden_dim * (2 if bidir else 1),
+                                  1)
+
+        self.init_weights()
+
+
+    def init_weights(self):
+        for name, param in self.rnn.named_parameters():
+            if 'bias' in name:
+                if self.rnn_s == 'lstm':
+                    nn.init.constant_(param, 1)
+                elif self.rnn_s == 'gru':
+                    nn.init.constant_(param, -1)
+                else:
+                    nn.init.uniform_(param, -1, 1)
+            elif 'weight' in name:
+                nn.init.xavier_normal_(param)
+
+
+    def forward(self, x):
+        self.rnn.flatten_parameters()
+        h_0 = torch.randn((self.n_layers * (2 if self.bidir else 1),
+                           x.shape[0],
+                           self.hidden_dim)).to(self.device)
+        if self.rnn_s == 'lstm':
+            c_0 = torch.randn((self.n_layers * (2 if self.bidir else 1),
+                               x.shape[0],
+                               self.hidden_dim)).to(self.device)
+            x, h = self.rnn(x, (h_0, c_0))
+        else:
+            x, h = self.rnn(x, h_0)
+        ## if using many-to-many, then x need to be flattend in the last 2 dim
+        #x = x.flatten(start_dim=1)
+        ## if doing many-to-one, then only use last L in x.shape=[N,L,C]
+        x = x[:,-1,:]
+        phase = self.linear_p(x)
+        dm = self.linear_dm(x)
+
+        return phase, dm
 
 
 
@@ -216,14 +285,10 @@ class ConvNN_Regr(nn.Module):
         if kernel_size == 2:
             self.cnv_l += 1
 
-        self.fc_h = nn.Linear(self.hidden_channels[-1] * self.cnv_l,
-                              16)
+        self.fc_h = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
 
-        self.out_p = nn.Linear(16,
-                               1)
-        self.out_dm = nn.Linear(16,
-                                1)
-
+        self.out_p = nn.Linear(16, 1)
+        self.out_dm = nn.Linear(16, 1)
 
 
     def forward(self, x):
@@ -238,6 +303,8 @@ class ConvNN_Regr(nn.Module):
 
         x = x.flatten(start_dim=1)
         h = F.celu(self.fc_h(x))
+        ## add activation layers if desired:
+        # F.relu(self.out_p(h)) or F.sigmoid(self.out_p(h))
         phase = self.out_p(h)
         dm = self.out_dm(h)
 

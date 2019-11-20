@@ -114,16 +114,15 @@ def do_classification():
 
     ## Define GAN model, Ops, and Train ##
     if args.arch in ['lstm','gru','rnn']:
-        model = RecNN(seq_len=dataset.spec_len,
-                      n_feats=dataset.spec_nfeat,
-                      hidden_dim=args.h_units,
-                      n_layers=args.rnn_layers,
-                      rnn=args.arch,
-                      out_size=dataset.total_targets,
-                      dropout=args.dropout,
-                      bidir=args.rnn_bidir,
-                      device=device,
-                      mode=args.mode)
+        model = RecNN_Clas(seq_len=dataset.spec_len,
+                           n_feats=dataset.spec_nfeat,
+                           hidden_dim=args.h_units,
+                           n_layers=args.rnn_layers,
+                           rnn=args.arch,
+                           out_size=dataset.total_targets,
+                           dropout=args.dropout,
+                           bidir=args.rnn_bidir,
+                           device=device)
     elif args.arch == 'conv':
         model = ConvNN_Clas(seq_len=dataset.spec_len,
                             n_feats=dataset.spec_nfeat,
@@ -227,16 +226,15 @@ def do_regression():
 
     ## Define GAN model, Ops, and Train ##
     if args.arch in ['lstm','gru','rnn']:
-        model = RecNN(seq_len=dataset.spec_len,
-                      n_feats=dataset.spec_nfeat,
-                      hidden_dim=args.h_units,
-                      n_layers=args.rnn_layers,
-                      rnn=args.arch,
-                      out_size=dataset.total_targets,
-                      dropout=args.dropout,
-                      bidir=args.rnn_bidir,
-                      device=device,
-                      mode=args.mode)
+        model = RecNN_Regr(seq_len=dataset.spec_len,
+                           n_feats=dataset.spec_nfeat,
+                           hidden_dim=args.h_units,
+                           n_layers=args.rnn_layers,
+                           rnn=args.arch,
+                           out_size=dataset.total_targets,
+                           dropout=args.dropout,
+                           bidir=args.rnn_bidir,
+                           device=device)
     elif args.arch == 'conv':
         model = ConvNN_Regr(seq_len=dataset.spec_len,
                             n_feats=dataset.spec_nfeat,
