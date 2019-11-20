@@ -1,8 +1,6 @@
 import os, sys, re
 import numpy as np
-import pandas as pd
 import torch
-import gzip
 from torch.utils.data import DataLoader, TensorDataset, Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 from sklearn import preprocessing
