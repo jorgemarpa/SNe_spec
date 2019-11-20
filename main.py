@@ -201,7 +201,8 @@ def do_regression():
     ## Load Data ##
     dataset = DataSet_Regr(machine=args.machine,
                            timestamp=args.data.split('-')[1],
-                           length=args.data.split('-')[2])
+                           length=args.data.split('-')[2],
+                           normalized=True)
     dataset.spec_train += .5
     dataset.spec_test += .5
 

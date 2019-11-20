@@ -94,7 +94,7 @@ class DataSet_Class(Dataset):
 
 class DataSet_Regr(Dataset):
     def __init__(self, machine='local', timestamp='111519',
-                 length='1696'):
+                 length='1696', normalized=True):
         """SNe Spec dataset"""
 
         if machine == 'local':
@@ -125,14 +125,18 @@ class DataSet_Regr(Dataset):
         self.target_train = self.target_train.astype(np.float32)
         self.target_test = self.target_test.astype(np.float32)
 
+        ## MinMax Scaler of targets into [0,1] range
         self.scaler_data_min = np.array([-12, 0.6], dtype=np.float32)
         self.scaler_data_max = np.array([22, 1.8], dtype=np.float32)
-        #self.target_train_n = (self.target_train - self.scaler_data_min)/\
-        #                      (self.scaler_data_max - self.scaler_data_min)
-        #self.target_test_n = (self.target_test - self.scaler_data_min)/\
-        #                      (self.scaler_data_max - self.scaler_data_min)
-        self.target_train[:,0] += 12
-        self.target_test[:,0] += 12
+        if normalized:
+            self.target_train = (self.target_train - self.scaler_data_min)/\
+                                (self.scaler_data_max - self.scaler_data_min)
+            self.target_test = (self.target_test - self.scaler_data_min)/\
+                                (self.scaler_data_max - self.scaler_data_min)
+
+        else:
+            self.target_train[:,0] += 12
+            self.target_test[:,0] += 12
 
 
         self.spec_len = self.spec_test.shape[1]
