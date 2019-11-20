@@ -5,10 +5,10 @@ import torch.nn.functional as F
 
 class RecNN(nn.Module):
     def __init__(self, seq_len, n_feats, hidden_dim, n_layers,
-                 rnn='lstm', out_size=1, dropout=0.3, 
+                 rnn='lstm', out_size=1, dropout=0.3,
                  bidir=False, mode='clas', device='cpu'):
         super(RecNN, self).__init__()
-        
+
         self.rnn_s = rnn
         self.n_layers = n_layers
         self.bidir = bidir
@@ -77,18 +77,18 @@ class RecNN(nn.Module):
 
 class ConvNN_Clas(nn.Module):
     def __init__(self, seq_len, n_feats,
-                 n_blocks=3, hidden_channels=4, 
+                 n_blocks=3, hidden_channels=4,
                  kernel_size=3, out_size=1, dropout=0.3):
         super(ConvNN_Clas, self).__init__()
-        
+
         if type(hidden_channels) == int:
             self.hidden_channels = [hidden_channels] * n_blocks
         else:
             self.hidden_channels = hidden_channels
-        
+
         self.conv1 = nn.Sequential(
-            nn.Conv1d(n_feats, 
-                      self.hidden_channels[0], 
+            nn.Conv1d(n_feats,
+                      self.hidden_channels[0],
                       kernel_size),
             nn.BatchNorm1d(self.hidden_channels[0]),
             nn.ReLU(),
@@ -118,22 +118,22 @@ class ConvNN_Clas(nn.Module):
         #    nn.ReLU(),
         #    nn.MaxPool1d(kernel_size=kernel_size)
         #    )
-        
+
         def maxpool_out(l0, k, st):
             return int((l0 - k)/st)
-        
+
         self.cnv_l = seq_len
         for i in range(len(self.hidden_channels)):
-            self.cnv_l = maxpool_out(self.cnv_l, 
+            self.cnv_l = maxpool_out(self.cnv_l,
                                      kernel_size,
                                      kernel_size)
         if kernel_size == 2:
             self.cnv_l += 1
 
-        self.out = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 
+        self.out = nn.Linear(self.hidden_channels[-1] * self.cnv_l,
                              out_size)
 
-        
+
 
     def forward(self, x):
         # shape(x) = N, L, C
@@ -143,30 +143,30 @@ class ConvNN_Clas(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         #x = self.conv4(x)
-        
+
         x = x.flatten(start_dim=1)
         out = self.out(x)
-        
+
         return F.log_softmax(out, dim=1)
 
-        
-        
+
+
 class ConvNN_Regr(nn.Module):
     def __init__(self, seq_len, n_feats,
-                 n_blocks=5, hidden_channels=4, 
+                 n_blocks=5, hidden_channels=4,
                  kernel_size=3, out_size=1, dropout=0.3):
         super(ConvNN_Regr, self).__init__()
-        
+
         if type(hidden_channels) == int:
             self.hidden_channels = [hidden_channels] * n_blocks
         else:
             self.hidden_channels = hidden_channels
-        
+
         pool_size = 2
-        
+
         self.conv1 = nn.Sequential(
-            nn.Conv1d(n_feats, 
-                      self.hidden_channels[0], 
+            nn.Conv1d(n_feats,
+                      self.hidden_channels[0],
                       kernel_size),
             nn.BatchNorm1d(self.hidden_channels[0]),
             nn.ReLU(),
@@ -204,25 +204,27 @@ class ConvNN_Regr(nn.Module):
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=pool_size)
             )
-        
+
         def maxpool_out(l0, k, st):
             return int((l0 - k)/st)
-        
+
         self.cnv_l = seq_len
         for i in range(len(self.hidden_channels)):
-            self.cnv_l = maxpool_out(self.cnv_l, 
+            self.cnv_l = maxpool_out(self.cnv_l,
                                      pool_size,
                                      pool_size)
         if kernel_size == 2:
             self.cnv_l += 1
-            
+
         self.fc_h = nn.Linear(self.hidden_channels[-1] * self.cnv_l,
                               16)
 
-        self.out = nn.Linear(16, 
-                             out_size)
+        self.out_p = nn.Linear(16,
+                               1)
+        self.out_dm = nn.Linear(16,
+                                1)
 
-        
+
 
     def forward(self, x):
         # shape(x) = N, L, C
@@ -233,9 +235,10 @@ class ConvNN_Regr(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
-        
+
         x = x.flatten(start_dim=1)
         h = F.celu(self.fc_h(x))
-        out = self.out(h)
-        
-        return out
+        phase = self.out_p(h)
+        dm = self.out_dm(h)
+
+        return phase, dm

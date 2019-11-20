@@ -111,14 +111,14 @@ class DataSet_Regr(Dataset):
                                   % (root, timestamp, length))
         self.target_train = np.load('%s/labels.train.aug.%s.%s.regr.npy'
                                     % (root, timestamp, length),
-                                    allow_pickle=True)[:,[0,2]]
+                                    allow_pickle=True)
 
 
         self.spec_test = np.load('%s/spectraX.test.%s.%s.regr.npy'
                                  % (root, timestamp, length))
         self.target_test = np.load('%s/labels.test.%s.%s.regr.npy'
                                    % (root, timestamp, length),
-                                   allow_pickle=True)[:,[0,2]]
+                                   allow_pickle=True)
 
         self.spec_train = self.spec_train[:,:, np.newaxis].astype(np.float32)
         self.spec_test = self.spec_test[:,:, np.newaxis].astype(np.float32)

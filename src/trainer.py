@@ -21,14 +21,13 @@ class Trainer_Class():
             print("Let's use", torch.cuda.device_count(), "GPUs!")
             self.model = nn.DataParallel(self.model)
         self.model.to(self.device)
-        print('Is model in cuda? ', 
+        print('Is model in cuda? ',
               next(self.model.parameters()).is_cuda)
         self.opt = optimizer
         self.sch = scheduler
         self.batch_size = batch_size
         self.train_loss = {'Loss': []}
         self.val_loss = {'Loss': [], 'F1': [], 'Acc': []}
-        self.test_loss = {'Loss': [], 'F1': [], 'Acc': []}
         self.num_steps = 0
         self.print_every = print_every
         self.loss = nn.NLLLoss(reduction='sum')  # test with reduction=sum
@@ -45,22 +44,22 @@ class Trainer_Class():
             self.val_loss['Loss'].append(loss.item() / len(y))
 
         return loss
-    
-    
+
+
     def _metrics(self, y, yhat, cm=False):
         pred = np.argmax(yhat, axis=1)
         f1 = metrics.f1_score(y, pred, average='weighted')
         self.val_loss['F1'].append(f1)
         acc = metrics.accuracy_score(y, pred)
         self.val_loss['Acc'].append(acc)
-        
+
         if cm:
-            conf_m = metrics.confusion_matrix(y, pred, 
+            conf_m = metrics.confusion_matrix(y, pred,
                                               labels=None)
             fig, img = plot_conf_matrix(conf_m, set(y),
                                         cl_names=self.l_enc.classes_)
-            
-            self.wb.log({'Conf_Matrix': self.wb.Image(fig)}, 
+
+            self.wb.log({'Conf_Matrix': self.wb.Image(fig)},
                         step=self.num_steps)
 
 
@@ -76,7 +75,7 @@ class Trainer_Class():
             yhat = self.model(x)
 
             loss = self._loss(y, yhat, train=True)
-            
+
             self.opt.zero_grad()
             loss.backward()
             self.opt.step()
@@ -98,8 +97,8 @@ class Trainer_Class():
 
                 loss = self._loss(y, yhat, train=False)
 
-        self._metrics(np.array(y_all), 
-                      np.array(yhat_all), 
+        self._metrics(np.array(y_all),
+                      np.array(yhat_all),
                       cm=True if epoch % 5 else False)
         self._report(i, train=False, force=True)
 
@@ -154,40 +153,40 @@ class Trainer_Class():
             torch.save(self.model.state_dict(),
                        '%s/model_%s.pt' %
                        (self.wb.run.dir, self.wb.run.name))
-            
+
     def test_in(self, test_spec, test_y):
-        
+
         print('')
         print('########################################')
         print('###########      TEST    ###############')
         print('########################################')
         print('')
-    
+
         test_spec = torch.from_numpy(test_spec).to(self.device)
         test_label = torch.from_numpy(test_y).to(self.device)
         test_pred_lp = self.model(test_spec)
         test_pred_p = torch.exp(test_pred_lp).cpu().detach().numpy()
         test_pred_y = np.argmax(test_pred_p, axis=1)
-        
+
         loss = self.loss(test_pred_lp, test_label)
         self.wb.run.summary['Hold-out_Loss'] = loss.item() / len(test_label)
         f1 = metrics.f1_score(test_y, test_pred_y, average='weighted')
         self.wb.run.summary['Hold-out_F1'] = f1
         acc = metrics.accuracy_score(test_y, test_pred_y)
         self.wb.run.summary['Hold-out_Acc'] = acc
-        
-        cm = metrics.confusion_matrix(test_y, test_pred_y, 
+
+        cm = metrics.confusion_matrix(test_y, test_pred_y,
                                           labels=None)
         fig, img = plot_conf_matrix(cm, set(test_y),
                                     cl_names=self.l_enc.classes_)
-        
+
         self.wb.log({'Hold-out_Conf_Matrix': self.wb.Image(fig)})
-        
+
         print('Hold-out Loss: %.4f' % loss)
         print('Hold-out F1  : %.4f' % f1)
         print('Hold-out Acc : %.4f' % acc)
         print("__"*20)
-        
+
 
 
     def _report(self, i, train=True, force=False):
@@ -213,7 +212,7 @@ class Trainer_Class():
 
             print("--"*20)
 
-            
+
 
 ############################################################################
 ############################   Regressor   #################################
@@ -229,14 +228,17 @@ class Trainer_Regr():
             print("Let's use", torch.cuda.device_count(), "GPUs!")
             self.model = nn.DataParallel(self.model)
         self.model.to(self.device)
-        print('Is model in cuda? ', 
+        print('Is model in cuda? ',
               next(self.model.parameters()).is_cuda)
         self.opt = optimizer
         self.sch = scheduler
         self.batch_size = batch_size
-        self.train_loss = {'Loss': []}
-        self.val_loss = {'Loss': [], 'F1': [], 'Acc': []}
-        self.test_loss = {'Loss': [], 'F1': [], 'Acc': []}
+        self.train_loss = {'Loss': [],
+                          'Loss_phase': [],
+                          'Loss_dm15': []}
+        self.val_loss = {'Loss': [],
+                         'Loss_phase': [],
+                         'Loss_dm15': []}
         self.num_steps = 0
         self.print_every = print_every
         self.loss = nn.MSELoss(reduction='sum')  # test with reduction=sum
@@ -244,15 +246,22 @@ class Trainer_Regr():
 
 
     ## loss function
-    def _loss(self, y, yhat, train=True):
-        loss = self.loss(yhat, y)
+    def _loss(self, y, phat, dmhat, train=True):
+        loss_p = self.loss(phat, y[:,0].unsqueeze(-1))
+        loss_dm = self.loss(dmhat, y[:,1].unsqueeze(-1))
 
         if train:
-            self.train_loss['Loss'].append(loss.item() / len(y))
+            self.train_loss['Loss_phase'].append(loss_p.item() / len(y))
+            self.train_loss['Loss_dm15'].append(loss_dm.item() / len(y))
+            self.train_loss['Loss'].append((loss_dm.item() + loss_p.item())
+                                           / len(y))
         else:
-            self.val_loss['Loss'].append(loss.item() / len(y))
+            self.val_loss['Loss_phase'].append(loss_p.item() / len(y))
+            self.val_loss['Loss_dm15'].append(loss_dm.item() / len(y))
+            self.val_loss['Loss'].append((loss_dm.item() + loss_p.item())
+                                         / len(y))
 
-        return loss
+        return loss_p + loss_dm
 
 
     ## function that does the in-epoch training
@@ -264,10 +273,10 @@ class Trainer_Regr():
             self.num_steps += 1
             x = x.to(self.device)
             y = y.to(self.device)
-            yhat = self.model(x)
+            phat, dmhat = self.model(x)
 
-            loss = self._loss(y, yhat, train=True)
-            
+            loss = self._loss(y, phat, dmhat, train=True)
+
             self.opt.zero_grad()
             loss.backward()
             self.opt.step()
@@ -278,47 +287,35 @@ class Trainer_Regr():
     ## test in validation dataset
     def _val_epoch(self, test_loader, epoch):
         self.model.eval()
-        y_all, yhat_all = [], []
+        y_all, phat_all, dmhat_all = [], [], []
         with torch.no_grad():
             for i, (x, y) in enumerate(test_loader):
                 x = x.to(self.device)
                 y = y.to(self.device)
                 y_all.extend(y.cpu().detach().numpy())
 
-                yhat = self.model(x)
-                yhat_all.extend(yhat.cpu().detach().numpy())
+                phat, dmhat = self.model(x)
+                phat_all.extend(phat.cpu().detach().numpy())
+                dmhat_all.extend(dmhat.cpu().detach().numpy())
 
-                loss = self._loss(y, yhat, train=False)
+                loss = self._loss(y, phat, dmhat, train=False)
 
         self._report(i, train=False, force=True)
-        
+
+        yhat_all = np.array([phat_all, dmhat_all]).squeeze(-1).T
         y_all = np.array(y_all)
-        yhat_all = np.array(yhat_all)
-        
-        self.wb.log({'Val_RMSE_Phase': rmse(yhat_all[:,0], 
+
+        self.wb.log({'Val_RMSE_Phase': rmse(yhat_all[:,0],
                                             y_all[:,0])},
                     step=self.num_steps)
-        self.wb.log({'Val_RMSE_dm15' : rmse(yhat_all[:,1], 
+        self.wb.log({'Val_RMSE_dm15' : rmse(yhat_all[:,1],
                                             y_all[:,1])},
                     step=self.num_steps)
-        
-        plt.close('all')
-        plt.clf()
-        fig, ax = plt.subplots(ncols=2, figsize=(10,4))
-        ax[0].scatter(y_all[:,0], y_all[:,0] - yhat_all[:,0], 
-                      marker='.', c='royalblue', alpha=.7)
-        ax[0].set_title('Phase')
-        ax[0].set_xlabel('True')
-        ax[0].set_ylabel('True - Pred')
-        
-        ax[1].scatter(y_all[:,1], y_all[:,1] - yhat_all[:,1], 
-                      marker='.', c='royalblue', alpha=.7)
-        ax[1].set_title('$\Delta m_{15}$')
-        ax[1].set_xlabel('True')
-        ax[1].set_ylabel('True - Pred')
-        fig.tight_layout()
-        self.wb.log({'Val_Regression': self.wb.Image(fig)})
-        plt.close('all')
+        if epoch % 2 == 0:
+            fig = residuals_scatter_plot(y_all,
+                                         yhat_all,
+                                         epoch=epoch)
+            self.wb.log({'Val_Regression': self.wb.Image(fig)})
 
         return loss
 
@@ -372,51 +369,61 @@ class Trainer_Regr():
             torch.save(self.model.state_dict(),
                        '%s/model_%s.pt' %
                        (self.wb.run.dir, self.wb.run.name))
-            
-    
+
+
     ## test in hold-out dataset
     def test_in(self, test_spec, test_y):
-        
+
         print('')
         print('########################################')
         print('###########      TEST    ###############')
         print('########################################')
         print('')
-    
+
         test_spec = torch.from_numpy(test_spec).to(self.device)
         test_y = torch.from_numpy(test_y).to(self.device)
-        test_yhat = self.model(test_spec)
-        
-        loss = self.loss(test_yhat, test_y)
-        self.wb.run.summary['Hold-out_Loss'] = loss.item() / len(test_y)
-        test_y = test_y.cput().detach().numpy()
-        test_yhat = test_yhat.cput().detach().numpy()
-        phase_rms = rmse(test_yhat[:,0], test_y[:,0])
-        dm15_rms = rmse(test_yhat[:,1], test_y[:,1])
+        phat, dmhat = self.model(test_spec)
+
+        loss_p = self.loss(phat, test_y[:,0].unsqueeze(-1))
+        loss_dm = self.loss(dmhat, test_y[:,1].unsqueeze(-1))
+        self.wb.run.summary['Hold-out_Loss_phase'] = loss_p.item() / len(test_y)
+        self.wb.run.summary['Hold-out_Loss_dm15'] = loss_dm.item() / len(test_y)
+        test_y = test_y.cpu().detach().numpy()
+        phat = phat.cpu().detach().numpy()
+        dmhat = dmhat.cpu().detach().numpy()
+        phase_rms = rmse(phat, test_y[:,0])
+        dm15_rms = rmse(dmhat, test_y[:,1])
         self.wb.log({'Hold-out_RMSE_Phase': phase_rms})
         self.wb.log({'Hold-out_RMSE_dm15' : dm15_rms})
-        
-        print('Hold-out Loss     : %.4f' % loss)
+
         print('Hold-out Phase RMS: %.4f' % phase_rms)
         print('Hold-out dm15 RMS : %.4f' % dm15_rms)
         print("__"*20)
-        
 
-    
+
+
     ## report metrics
     def _report(self, i, train=True, force=False):
         ## ------------------------ Reports ---------------------------- ##
         ## print scalars to std output and save scalars/hist to W&B
         if i % self.print_every == 0 or force:
             if train:
-                print("Training iteration %i, global step %i" % 
+                print("Training iteration %i, global step %i" %
                       (i + 1, self.num_steps))
                 print("Loss: %3.4f" % (self.train_loss['Loss'][-1]))
+                self.wb.log({'Train_Loss_phase': self.train_loss['Loss_phase'][-1]},
+                            step=self.num_steps)
+                self.wb.log({'Train_Loss_dm15': self.train_loss['Loss_dm15'][-1]},
+                            step=self.num_steps)
                 self.wb.log({'Train_Loss': self.train_loss['Loss'][-1]},
                             step=self.num_steps)
             else:
                 print('*** VALIDATION ***')
                 print("Loss: %.4f" % (self.val_loss['Loss'][-1]))
+                self.wb.log({'Val_Loss_phase': self.val_loss['Loss_phase'][-1]},
+                            step=self.num_steps)
+                self.wb.log({'Val_Loss_dm15': self.val_loss['Loss_dm15'][-1]},
+                            step=self.num_steps)
                 self.wb.log({'Val_Loss': self.val_loss['Loss'][-1]},
                             step=self.num_steps)
             print("--"*20)
