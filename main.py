@@ -26,8 +26,8 @@ parser.add_argument('--machine', dest='machine', type=str,
                     default='exalearn',
                     help='Where is running ([local], colab, exalearn)')
 
-parser.add_argument('--mode', dest='mode', type=str, default='clas',
-                    help='Whether to do classification or regression ([clas], regr)')
+parser.add_argument('--mode', dest='mode', type=str, default='regr',
+                    help='Whether to do classification or regression (clas, [regr])')
 parser.add_argument('--data', dest='data', type=str,
                     default='spec-111519-1696',
                     help='Which data use ([spec])')
@@ -47,8 +47,8 @@ parser.add_argument('--batch-size', dest='batch_size', type=int, default=128,
 parser.add_argument('--epochs', dest='num_epochs', type=int, default=150,
                     help='total number of training epochs [150]')
 
-parser.add_argument('--arch', dest='arch', type=str, default='lstm',
-                    help='Layer architecture ([lstm],gru,rnn,conv)')
+parser.add_argument('--arch', dest='arch', type=str, default='conv',
+                    help='Layer architecture (lstm,gru,rnn,[conv])')
 parser.add_argument('--hidden-units', dest='h_units', type=int, default=32,
                     help='number of hidden units [32]')
 parser.add_argument('--rnn-layers', dest='rnn_layers', type=int, default=3,
@@ -58,7 +58,7 @@ parser.add_argument('--dropout', dest='dropout', type=float, default=0.3,
 parser.add_argument('--rnn-bidir', dest='rnn_bidir', type=str2bool,
                     nargs='?', const=True,
                     default=False, help='Bidirectional RNN [False]')
-parser.add_argument('--kernel-size', dest='kernel_size', type=int, default=3,
+parser.add_argument('--kernel-size', dest='kernel_size', type=int, default=5,
                     help='kernel size for conv, use odd ints [5]')
 
 parser.add_argument('--comment', dest='comment', type=str, default='',
