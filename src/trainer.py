@@ -306,10 +306,10 @@ class Trainer_Regr():
         y_all = np.array(y_all)
 
         self.wb.log({'Val_RMSE_Phase': rmse(yhat_all[:,0],
-                                            y_all[:,0])},
+                                            y_all[:,0], unscale = 'phase')},
                     step=self.num_steps)
         self.wb.log({'Val_RMSE_dm15' : rmse(yhat_all[:,1],
-                                            y_all[:,1])},
+                                            y_all[:,1], unscale = 'dm15')},
                     step=self.num_steps)
         if epoch % 2 == 0:
             fig = residuals_scatter_plot(y_all,
@@ -391,8 +391,8 @@ class Trainer_Regr():
         test_y = test_y.cpu().detach().numpy()
         phat = phat.cpu().detach().numpy()
         dmhat = dmhat.cpu().detach().numpy()
-        phase_rms = rmse(phat, test_y[:,0])
-        dm15_rms = rmse(dmhat, test_y[:,1])
+        phase_rms = rmse(phat, test_y[:,0], unscale = 'phase')
+        dm15_rms = rmse(dmhat, test_y[:,1], unscale = 'dm15')
         self.wb.log({'Hold-out_RMSE_Phase': phase_rms})
         self.wb.log({'Hold-out_RMSE_dm15' : dm15_rms})
 

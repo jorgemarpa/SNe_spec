@@ -120,7 +120,21 @@ def normalize_target(data, scale_to=[0,1], n_feat=2):
     return normed
 
 
-def rmse(predictions, targets):
+def rmse(predictions, targets, unscale = False):
+    '''
+    unscale is a hack to undo scaling done by dataset initial
+    note: numbers are hard coded and must match
+    '''
+
+    if unscale == 'phase':
+        mn, mx = -10, 20
+        predictions = (mx - mn) * predictions + mn
+        targets = (mx - mn) * targets + mn
+    elif unscale == 'dm15':
+        mn, mx = 0.85, 1.55
+        predictions = (mx - mn) * predictions + mn
+        targets = (mx - mn) * targets + mn
+    # else do calculation on scaled quantities
     return np.sqrt(((predictions - targets) ** 2).mean())
 
 
