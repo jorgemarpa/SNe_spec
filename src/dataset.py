@@ -126,8 +126,8 @@ class DataSet_Regr(Dataset):
         self.target_test = self.target_test.astype(np.float32)
 
         ## MinMax Scaler of targets into [0,1] range
-        self.scaler_data_min = np.array([-12, 0.6], dtype=np.float32)
-        self.scaler_data_max = np.array([22, 1.8], dtype=np.float32)
+        self.scaler_data_min = np.array([-10, 0.85], dtype=np.float32)
+        self.scaler_data_max = np.array([20, 1.55], dtype=np.float32)
         if normalized:
             self.target_train = (self.target_train - self.scaler_data_min)/\
                                 (self.scaler_data_max - self.scaler_data_min)
