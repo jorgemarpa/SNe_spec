@@ -231,7 +231,7 @@ class ConvNN_Regr(nn.Module):
         else:
             self.hidden_channels = hidden_channels
 
-        pool_size = 2
+        pool_size = 3
 
         self.conv1 = nn.Sequential(
             nn.Conv1d(n_feats,
@@ -275,17 +275,21 @@ class ConvNN_Regr(nn.Module):
             )
 
         def maxpool_out(l0, k, st):
-            return int((l0 - k)/st)
+            return int((l0 - k)/st + 1)
 
         self.cnv_l = seq_len
         for i in range(len(self.hidden_channels)):
             self.cnv_l = maxpool_out(self.cnv_l,
+                                     kernel_size,
+                                     1)
+            print('cnv  %i: ' % i, self.cnv_l)
+            self.cnv_l = maxpool_out(self.cnv_l,
                                      pool_size,
                                      pool_size)
-        if kernel_size == 2:
-            self.cnv_l += 1
+            print('pool %i: ' % i, self.cnv_l)
 
-        self.fc_h = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
+        self.fc_hp = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
+        self.fc_hdm = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
 
         self.out_p = nn.Linear(16, 1)
         self.out_dm = nn.Linear(16, 1)
@@ -300,12 +304,16 @@ class ConvNN_Regr(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
+        
+        print(x.shape, self.cnv_l)
 
         x = x.flatten(start_dim=1)
-        h = F.celu(self.fc_h(x))
+        print(x.shape)
+        h_phase = F.celu(self.fc_hp(x))
+        h_dm = F.celu(self.fc_hdm(x))
         ## add activation layers if desired:
         # F.relu(self.out_p(h)) or F.sigmoid(self.out_p(h))
-        phase = self.out_p(h)
-        dm = self.out_dm(h)
+        phase = self.out_p(h_phase)
+        dm = self.out_dm(h_dm)
 
         return phase, dm
