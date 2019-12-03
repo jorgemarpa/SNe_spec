@@ -247,11 +247,8 @@ class ConvNN_Regr(nn.Module):
         # conv1d needs N,C,L
         x = x.transpose(1,2)
         x = self.conv_blocks(x)
-        
-        print(x.shape, self.cnv_l)
 
         x = x.flatten(start_dim=1)
-        print(x.shape)
         h_phase = F.celu(self.fc_hp(x))
         h_dm = F.celu(self.fc_hdm(x))
         ## add activation layers if desired:
