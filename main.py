@@ -52,7 +52,7 @@ parser.add_argument('--arch', dest='arch', type=str, default='conv',
 parser.add_argument('--hidden-units', dest='h_units', type=int, default=32,
                     help='number of hidden units [32]')
 parser.add_argument('--seq-layers', dest='seq_layers', type=int, default=3,
-                    help='number of layers/blocks for rnn/conv [5]')
+                    help='number of layers/blocks for rnn/conv [3]')
 parser.add_argument('--dropout', dest='dropout', type=float, default=0.3,
                     help='dropout for rnn/conv layers [0.2]')
 parser.add_argument('--rnn-bidir', dest='rnn_bidir', type=str2bool,
