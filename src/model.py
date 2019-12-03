@@ -147,7 +147,8 @@ class RecNN_Regr(nn.Module):
 class ConvNN_Clas(nn.Module):
     def __init__(self, seq_len, n_feats,
                  n_blocks=3, hidden_channels=4,
-                 kernel_size=3, out_size=1, dropout=0.3):
+                 conv_ks=3, pool_ks=3,
+                 out_size=1, dropout=0.3):
         super(ConvNN_Clas, self).__init__()
 
         if type(hidden_channels) == int:
@@ -155,49 +156,29 @@ class ConvNN_Clas(nn.Module):
         else:
             self.hidden_channels = hidden_channels
 
-        self.conv1 = nn.Sequential(
-            nn.Conv1d(n_feats,
-                      self.hidden_channels[0],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[0]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=kernel_size)
-            )
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(self.hidden_channels[0],
-                      self.hidden_channels[1],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[1]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=kernel_size)
-            )
-        self.conv3 = nn.Sequential(
-            nn.Conv1d(self.hidden_channels[1],
-                      self.hidden_channels[2],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[2]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=kernel_size)
-            )
-        #self.conv4 = nn.Sequential(
-        #    nn.Conv1d(self.hidden_channels[2],
-        #              self.hidden_channels[3],
-        #              kernel_size),
-        #    nn.BatchNorm1d(self.hidden_channels[3]),
-        #    nn.ReLU(),
-        #    nn.MaxPool1d(kernel_size=kernel_size)
-        #    )
+        self.conv_blocks = nn.Sequential()
+        
+        for i in range(n_blocks):
+            ch_in = n_feats if i == 0 else self.hidden_channels[i-1]
+            self.conv_blocks.add_module('conv_%i' % (i+1), nn.Conv1d(ch_in, 
+                                                  self.hidden_channels[i], 
+                                                  conv_ks))
+            self.conv_blocks.add_module('bn_%i' % (i+1), nn.BatchNorm1d(self.hidden_channels[i]))
+            self.conv_blocks.add_module('relu_%i' % (i+1), nn.ReLU())
+            self.conv_blocks.add_module('pool_%i' % (i+1), nn.MaxPool1d(pool_ks))
 
+            
         def maxpool_out(l0, k, st):
-            return int((l0 - k)/st)
+            return int((l0 - k)/st + 1)
 
         self.cnv_l = seq_len
         for i in range(len(self.hidden_channels)):
             self.cnv_l = maxpool_out(self.cnv_l,
-                                     kernel_size,
-                                     kernel_size)
-        if kernel_size == 2:
-            self.cnv_l += 1
+                                     conv_ks,
+                                     1)
+            self.cnv_l = maxpool_out(self.cnv_l,
+                                     pool_ks,
+                                     pool_ks)
 
         self.out = nn.Linear(self.hidden_channels[-1] * self.cnv_l,
                              out_size)
@@ -208,10 +189,7 @@ class ConvNN_Clas(nn.Module):
         # shape(x) = N, L, C
         # conv1d needs N,C,L
         x = x.transpose(1,2)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        #x = self.conv4(x)
+        x = self.conv_blocks(x)
 
         x = x.flatten(start_dim=1)
         out = self.out(x)
@@ -223,7 +201,8 @@ class ConvNN_Clas(nn.Module):
 class ConvNN_Regr(nn.Module):
     def __init__(self, seq_len, n_feats,
                  n_blocks=5, hidden_channels=4,
-                 kernel_size=3, out_size=1, dropout=0.3):
+                 conv_ks=3, pool_ks=3, 
+                 out_size=1, dropout=0.3):
         super(ConvNN_Regr, self).__init__()
 
         if type(hidden_channels) == int:
@@ -231,61 +210,33 @@ class ConvNN_Regr(nn.Module):
         else:
             self.hidden_channels = hidden_channels
 
-        pool_size = 2
+        
+        self.conv_blocks = nn.Sequential()
+        
+        for i in range(n_blocks):
+            ch_in = n_feats if i == 0 else self.hidden_channels[i-1]
+            self.conv_blocks.add_module('conv_%i' % (i+1), nn.Conv1d(ch_in, 
+                                                  self.hidden_channels[i], 
+                                                  conv_ks))
+            self.conv_blocks.add_module('bn_%i' % (i+1), nn.BatchNorm1d(self.hidden_channels[i]))
+            self.conv_blocks.add_module('relu_%i' % (i+1), nn.ReLU())
+            self.conv_blocks.add_module('pool_%i' % (i+1), nn.MaxPool1d(pool_ks))
 
-        self.conv1 = nn.Sequential(
-            nn.Conv1d(n_feats,
-                      self.hidden_channels[0],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[0]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size)
-            )
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(self.hidden_channels[0],
-                      self.hidden_channels[1],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[1]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size)
-            )
-        self.conv3 = nn.Sequential(
-            nn.Conv1d(self.hidden_channels[1],
-                      self.hidden_channels[2],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[2]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size)
-            )
-        self.conv4 = nn.Sequential(
-            nn.Conv1d(self.hidden_channels[2],
-                      self.hidden_channels[3],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[3]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size)
-            )
-        self.conv5 = nn.Sequential(
-            nn.Conv1d(self.hidden_channels[3],
-                      self.hidden_channels[4],
-                      kernel_size),
-            nn.BatchNorm1d(self.hidden_channels[4]),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size)
-            )
 
         def maxpool_out(l0, k, st):
-            return int((l0 - k)/st)
+            return int((l0 - k)/st + 1)
 
         self.cnv_l = seq_len
         for i in range(len(self.hidden_channels)):
             self.cnv_l = maxpool_out(self.cnv_l,
-                                     pool_size,
-                                     pool_size)
-        if kernel_size == 2:
-            self.cnv_l += 1
+                                     conv_ks,
+                                     1)
+            self.cnv_l = maxpool_out(self.cnv_l,
+                                     pool_ks,
+                                     pool_ks)
 
-        self.fc_h = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
+        self.fc_hp = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
+        self.fc_hdm = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
 
         self.out_p = nn.Linear(16, 1)
         self.out_dm = nn.Linear(16, 1)
@@ -295,17 +246,17 @@ class ConvNN_Regr(nn.Module):
         # shape(x) = N, L, C
         # conv1d needs N,C,L
         x = x.transpose(1,2)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
+        x = self.conv_blocks(x)
+        
+        print(x.shape, self.cnv_l)
 
         x = x.flatten(start_dim=1)
-        h = F.celu(self.fc_h(x))
+        print(x.shape)
+        h_phase = F.celu(self.fc_hp(x))
+        h_dm = F.celu(self.fc_hdm(x))
         ## add activation layers if desired:
         # F.relu(self.out_p(h)) or F.sigmoid(self.out_p(h))
-        phase = self.out_p(h)
-        dm = self.out_dm(h)
+        phase = self.out_p(h_phase)
+        dm = self.out_dm(h_dm)
 
         return phase, dm
