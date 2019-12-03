@@ -189,10 +189,7 @@ class ConvNN_Clas(nn.Module):
         # shape(x) = N, L, C
         # conv1d needs N,C,L
         x = x.transpose(1,2)
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        #x = self.conv4(x)
+        x = self.conv_blocks(x)
 
         x = x.flatten(start_dim=1)
         out = self.out(x)
