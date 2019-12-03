@@ -51,15 +51,17 @@ parser.add_argument('--arch', dest='arch', type=str, default='conv',
                     help='Layer architecture (lstm,gru,rnn,[conv])')
 parser.add_argument('--hidden-units', dest='h_units', type=int, default=32,
                     help='number of hidden units [32]')
-parser.add_argument('--rnn-layers', dest='rnn_layers', type=int, default=3,
-                    help='number of layers for rnn [5]')
+parser.add_argument('--seq-layers', dest='seq_layers', type=int, default=3,
+                    help='number of layers/blocks for rnn/conv [5]')
 parser.add_argument('--dropout', dest='dropout', type=float, default=0.3,
                     help='dropout for rnn/conv layers [0.2]')
 parser.add_argument('--rnn-bidir', dest='rnn_bidir', type=str2bool,
                     nargs='?', const=True,
                     default=False, help='Bidirectional RNN [False]')
-parser.add_argument('--kernel-size', dest='kernel_size', type=int, default=5,
+parser.add_argument('--conv-ks', dest='conv_ks', type=int, default=5,
                     help='kernel size for conv, use odd ints [5]')
+parser.add_argument('--pool-ks', dest='pool_ks', type=int, default=5,
+                    help='kernel size for pooling, use odd ints [5]')
 
 parser.add_argument('--comment', dest='comment', type=str, default='',
                     help='extra comments')
@@ -117,7 +119,7 @@ def do_classification():
         model = RecNN_Clas(seq_len=dataset.spec_len,
                            n_feats=dataset.spec_nfeat,
                            hidden_dim=args.h_units,
-                           n_layers=args.rnn_layers,
+                           n_layers=args.seq_layers,
                            rnn=args.arch,
                            out_size=dataset.total_targets,
                            dropout=args.dropout,
@@ -126,8 +128,10 @@ def do_classification():
     elif args.arch == 'conv':
         model = ConvNN_Clas(seq_len=dataset.spec_len,
                             n_feats=dataset.spec_nfeat,
-                            kernel_size=args.kernel_size,
+                            conv_ks=args.conv_ks,
+                            pool_ks=args.pool_ks,
                             hidden_channels=args.h_units,
+                            n_blocks=args.seq_layers,
                             out_size=dataset.total_targets,
                             dropout=args.dropout)
 
@@ -230,7 +234,7 @@ def do_regression():
         model = RecNN_Regr(seq_len=dataset.spec_len,
                            n_feats=dataset.spec_nfeat,
                            hidden_dim=args.h_units,
-                           n_layers=args.rnn_layers,
+                           n_layers=args.seq_layers,
                            rnn=args.arch,
                            out_size=dataset.total_targets,
                            dropout=args.dropout,
@@ -239,8 +243,10 @@ def do_regression():
     elif args.arch == 'conv':
         model = ConvNN_Regr(seq_len=dataset.spec_len,
                             n_feats=dataset.spec_nfeat,
-                            kernel_size=args.kernel_size,
+                            conv_ks=args.conv_ks,
+                            pool_ks=args.pool_ks,
                             hidden_channels=args.h_units,
+                            n_blocks=args.seq_layers,
                             out_size=dataset.total_targets,
                             dropout=args.dropout)
 
@@ -312,6 +318,24 @@ def do_regression():
 if __name__ == "__main__":
     for key, value in vars(args).items():
         print('%15s\t: %s' % (key, value))
+        
+    # check that cnv blocks, cnv/pool kernel sizes are ok
+    def maxpool_out(l0, k, st):
+            return int((l0 - k)/st + 1)
+        
+    aux = int(args.data[-4:])
+    print(aux)
+    for i in range(args.seq_layers):
+        aux = maxpool_out(aux, args.conv_ks, 1)
+        print('conv %i: ' % (i+1), aux)
+        aux = maxpool_out(aux, args.pool_ks, args.pool_ks)
+        print('pool %i: ' % (i+1), aux)
+        print('----------------------------')
+    if aux <= 0:
+        print('WARNING!')
+        print('Sequence length after convolution blocks is less than 0.')
+        print('Check combinations of "seq_layers", "conv_ks", and "pool_ks".')
+        sys.exit()
 
     if args.mode in ['clas', 'class', 'classification']:
         do_classification()
