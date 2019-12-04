@@ -135,8 +135,8 @@ class DataSet_Regr(Dataset):
                                 (self.scaler_data_max - self.scaler_data_min)
 
         else:
-            self.target_train[:,0] += 12
-            self.target_test[:,0] += 12
+            self.target_train[:,0] += 10
+            self.target_test[:,0] += 10
 
 
         self.spec_len = self.spec_test.shape[1]
