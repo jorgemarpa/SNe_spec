@@ -29,7 +29,7 @@ parser.add_argument('--machine', dest='machine', type=str,
 parser.add_argument('--mode', dest='mode', type=str, default='regr',
                     help='Whether to do classification or regression (clas, [regr])')
 parser.add_argument('--data', dest='data', type=str,
-                    default='spec-111519-1696',
+                    default='spec-112519-1696',
                     help='Which data use ([spec])')
 
 parser.add_argument('--optim', dest='optim', type=str, default='adam',
@@ -68,9 +68,9 @@ parser.add_argument('--comment', dest='comment', type=str, default='',
 args = parser.parse_args()
 
 # Initialize W&B project
-wandb.init(entity='deep_sne',
+wandb.init(entity='jorgemarpa',
            project="SNe_Spec_%s" % (args.mode),
-           notes='%s %s' % (args.run_name, args.comment))
+           tags=[args.comment])
 
 # save hyper-parameters to W&B
 wandb.config.update(args)
@@ -336,6 +336,7 @@ if __name__ == "__main__":
         print('Sequence length after convolution blocks is less than 0.')
         print('Check combinations of "seq_layers", "conv_ks", and "pool_ks".')
         sys.exit()
+    wandb.config.cnv_nFeat = aux
 
     if args.mode in ['clas', 'class', 'classification']:
         do_classification()

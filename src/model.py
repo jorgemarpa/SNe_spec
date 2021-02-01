@@ -235,11 +235,15 @@ class ConvNN_Regr(nn.Module):
                                      pool_ks,
                                      pool_ks)
 
-        self.fc_hp = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
-        self.fc_hdm = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
+        ## use dm15 as input for phase prediction
+        self.fc_h1p  = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16) 
+        self.fc_h1dm = nn.Linear(self.hidden_channels[-1] * self.cnv_l, 16)
+        
+        self.fc_h2p  = nn.Linear(16, 4)
+        self.fc_h2dm = nn.Linear(16, 4)
 
-        self.out_p = nn.Linear(16, 1)
-        self.out_dm = nn.Linear(16, 1)
+        self.out_p  = nn.Linear(4, 1)
+        self.out_dm = nn.Linear(4, 1)
 
 
     def forward(self, x):
@@ -248,12 +252,17 @@ class ConvNN_Regr(nn.Module):
         x = x.transpose(1,2)
         x = self.conv_blocks(x)
 
-        x = x.flatten(start_dim=1)
-        h_phase = F.celu(self.fc_hp(x))
-        h_dm = F.celu(self.fc_hdm(x))
-        ## add activation layers if desired:
-        # F.relu(self.out_p(h)) or F.sigmoid(self.out_p(h))
-        phase = self.out_p(h_phase)
-        dm = self.out_dm(h_dm)
+        feats = x.flatten(start_dim=1)
+        
+        ## first, predict dm15
+        h1_dm = F.celu(self.fc_h1dm(feats))
+        h2_dm = F.celu(self.fc_h2dm(h1_dm))
+        dm    = self.out_dm(h2_dm)
 
+        ## concat conv features and dm15
+        #feats_dm = torch.cat([feats, dm.detach()], dim=-1)
+        h1_phase = F.celu(self.fc_h1p(feats))
+        h2_phase = F.celu(self.fc_h2p(h1_phase))
+        phase    = self.out_p(h2_phase)
+    
         return phase, dm
